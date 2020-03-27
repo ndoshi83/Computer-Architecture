@@ -8,34 +8,58 @@ class CPU:
     def __init__(self):
         """Construct a new CPU."""
         # 256 bytes of memory
-        self.ram = [0]*256
+        self.ram = [0] * 256
+
         # 8 registers
-        self.reg = [0]*8
+        self.reg = [0] * 8
+
         # PC Counter
         self.pc = 0
 
+        # Directory
 
 
-    def load(self):
+
+    def load(self, filename):
         """Load a program into memory."""
 
         address = 0
 
+        try:
+            with open(filename) as f:
+                for line in f:
+                    # Skip comments
+                    comment_split = line.split('#')
+
+                    # Strip out white space
+                    num = comment_split[0].strip()
+
+                    # Ignore blank lines
+                    if num == '':
+                        continue
+
+                    val = int(num, 2)
+                    self.ram[address] = val
+                    address += 1
+                    # print(val)
+        
+        except FileNotFoundError:
+            print('File not found')
+            sys.exit(2)
         # For now, we've just hardcoded a program:
 
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
+        # program = [
+        #     # # From print8.ls8
+        #     # 0b10000010, # LDI R0,8
+        #     # 0b00000000,
+        #     # 0b00001000,
+        #     # 0b01000111, # PRN R0
+        #     # 0b00000000,
+        #     # 0b00000001, # HLT
+        # ]
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+        # for instruction in program:
+            
 
 
     def alu(self, op, reg_a, reg_b):
@@ -75,22 +99,41 @@ class CPU:
         self.ram[MAR] = MDR
         return
 
+    def HLT(self):
+        return False
+
+    def LDI(self, i):
+        oa = self.ram_read(i+1)
+        ob = self.ram_read(i+2)
+        self.reg[oa] = ob
+
+    def PRN(self, i):
+        oa = self.ram_read(i+1)
+        print(self.reg[oa])
+
+    def MULT(self, i):
+        oa = self.ram_read(i+1)
+        ob = self.ram_read(i+2)
+        self.reg[oa] = self.reg[oa] * self.reg[ob]
+
     def run(self):
         """Run the CPU."""
         running = True
         while running:
             IR = self.ram[self.pc]
-            operand_a = self.ram_read(self.pc+1)
-            operand_b = self.ram_read(self.pc+2)
+            # operand_a = self.ram_read(self.pc+1)
+            # operand_b = self.ram_read(self.pc+2)
             if IR == 0b10000010:
-                self.reg[operand_a] = operand_b
+                self.LDI(self.pc)
                 self.pc += 3
             elif IR == 0b01000111:
-                operand_a = self.ram_read(self.pc+1)
-                print(self.reg[operand_a])
+                self.PRN(self.pc)
                 self.pc += 2
+            elif IR == 0b10100010:
+                self.MULT(self.pc)
+                self.pc += 3
             elif IR == 0b00000001:
-                exit()
+                running = self.HLT()
             else: 
                 print('Unknown Instruction.')
 
